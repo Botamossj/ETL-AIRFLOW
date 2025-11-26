@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Contratos - IA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #00d4ff;
+            --secondary-color: #7b2cbf;
+            --bg-dark: #0a0e27;
+            --bg-card: #0f1629;
+            --bg-card-hover: #151b2e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --accent-purple: #9d4edd;
+            --accent-cyan: #00d4ff;
+            --glow-color: rgba(0, 212, 255, 0.5);
+            --border-color: rgba(0, 212, 255, 0.2);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Fondo animado con partículas */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(123, 44, 191, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(157, 78, 221, 0.1) 0%, transparent 50%);
+            z-index: 0;
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px var(--glow-color);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 10px var(--glow-color)); }
+            to { filter: drop-shadow(0 0 20px var(--glow-color)); }
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Stats Cards */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+        }
+
+        .stat-card .label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Contratos Grid */
+        .contratos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .contrato-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contrato-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .contrato-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+            background: var(--bg-card-hover);
+        }
+
+        .contrato-card:hover::after {
+            opacity: 1;
+        }
+
+        .contrato-card .codigo {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .contrato-card .codigo::before {
+            content: '⚡';
+            font-size: 1.5rem;
+        }
+
+        .contrato-card .field {
+            margin-bottom: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .contrato-card .field:last-child {
+            border-bottom: none;
+        }
+
+        .contrato-card .field-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .contrato-card .field-value {
+            color: var(--text-primary);
+            font-size: 1rem;
+            word-break: break-word;
+        }
+
+        .contrato-card .field-value:empty::after {
+            content: 'N/A';
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Chatbot */
+        .chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 400px;
+            max-height: 600px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .chatbot-container.minimized {
+            height: 60px;
+            max-height: 60px;
+        }
+
+        .chatbot-header {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .chatbot-header h3 {
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chatbot-header .toggle-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .chatbot-header .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(180deg);
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .chatbot-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chatbot-messages::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        .chatbot-messages::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 3px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+            animation: messageSlide 0.3s ease;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot {
+            background: var(--bg-card-hover);
+            border: 1px solid var(--border-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chatbot-input-container {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+        }
+
+        .chatbot-input {
+            flex: 1;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 12px 20px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .chatbot-input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .chatbot-send-btn {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .chatbot-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 212, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent-cyan);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Loading State */
+        .loading-container {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 212, 255, 0.2);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+            line-height: 1.6;
+        }
+
+        .error-message code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .contratos-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chatbot-container {
+                width: calc(100% - 40px);
+                right: 20px;
+                left: 20px;
+            }
+        }
+
+        /* Selector de contrato para chatbot */
+        .contrato-selector {
+            margin-bottom: 10px;
+        }
+
+        .contrato-selector select {
+            width: 100%;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .contrato-selector select:focus {
+            border-color: var(--accent-cyan);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Dashboard de Contratos IA</h1>
+            <p>Visualización inteligente de datos extraídos con IA</p>
+        </div>
+
+        <div class="stats-container" id="statsContainer">
+            <div class="stat-card">
+                <div class="number" id="totalContratos">0</div>
+                <div class="label">Total Contratos</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="conRazonSocial">0</div>
+                <div class="label">Con Razón Social</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="conRUC">0</div>
+                <div class="label">Con RUC</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="conContacto">0</div>
+                <div class="label">Con Contacto</div>
+            </div>
+        </div>
+
+        <div id="loadingContainer" class="loading-container">
+            <div class="spinner"></div>
+            <p>Cargando contratos...</p>
+        </div>
+
+        <div id="errorContainer" class="error-message" style="display: none;"></div>
+
+        <div class="contratos-grid" id="contratosGrid" style="display: none;"></div>
+    </div>
+
+    <!-- Chatbot -->
+    <div class="chatbot-container" id="chatbotContainer">
+        <div class="chatbot-header" onclick="toggleChatbot()">
+            <h3>💬 Asistente IA de Contratos</h3>
+            <button class="toggle-btn" id="toggleBtn">−</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="message bot">
+                👋 Hola! Soy tu asistente virtual de contratos. Puedo ayudarte a entender información sobre los contratos. ¿En qué puedo ayudarte?
+            </div>
+        </div>
+        <div class="chatbot-input-container">
+            <div class="contrato-selector">
+                <select id="contratoSelect">
+                    <option value="">Contrato general</option>
+                </select>
+            </div>
+            <input 
+                type="text" 
+                class="chatbot-input" 
+                id="chatbotInput" 
+                placeholder="Escribe tu pregunta..."
+                onkeypress="handleChatKeyPress(event)"
+            >
+            <button class="chatbot-send-btn" id="chatbotSendBtn" onclick="sendMessage()">
+                ➤
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let contratos = [];
+        let chatbotMinimized = false;
+
+        // Cargar contratos al iniciar
+        async function loadContratos() {
+            try {
+                const response = await fetch('/api/contratos');
+                const data = await response.json();
+                
+                if (!response.ok || data.error) {
+                    let errorMsg = data.error || 'Error desconocido';
+                    let details = data.details || '';
+                    let suggestion = data.suggestion || '';
+                    
+                    let fullError = `<strong>${errorMsg}</strong>`;
+                    if (details) {
+                        fullError += `<br><small>${details}</small>`;
+                    }
+                    if (suggestion) {
+                        fullError += `<br><small style="color: var(--accent-cyan);">💡 ${suggestion}</small>`;
+                    }
+                    if (data.database) {
+                        fullError += `<br><small>Base de datos: <code>${data.database}</code></small>`;
+                    }
+                    
+                    showError(fullError);
+                    document.getElementById('loadingContainer').style.display = 'none';
+                    return;
+                }
+
+                contratos = data.contratos || [];
+                updateStats(contratos);
+                renderContratos(contratos);
+                populateContratoSelect(contratos);
+                
+                document.getElementById('loadingContainer').style.display = 'none';
+                document.getElementById('contratosGrid').style.display = 'grid';
+                document.getElementById('errorContainer').style.display = 'none';
+            } catch (error) {
+                let errorMsg = 'Error al cargar contratos: ' + error.message;
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorMsg = 'No se pudo conectar al servidor. Verifica que el servidor Flask esté corriendo en http://localhost:5000';
+                }
+                showError(errorMsg);
+                document.getElementById('loadingContainer').style.display = 'none';
+            }
+        }
+
+        function updateStats(contratos) {
+            const total = contratos.length;
+            const conRazonSocial = contratos.filter(c => c.razon_social).length;
+            const conRUC = contratos.filter(c => c.ruc).length;
+            const conContacto = contratos.filter(c => c.telefono || c.mail).length;
+
+            document.getElementById('totalContratos').textContent = total;
+            document.getElementById('conRazonSocial').textContent = conRazonSocial;
+            document.getElementById('conRUC').textContent = conRUC;
+            document.getElementById('conContacto').textContent = conContacto;
+        }
+
+        function renderContratos(contratos) {
+            const grid = document.getElementById('contratosGrid');
+            grid.innerHTML = '';
+
+            if (contratos.length === 0) {
+                grid.innerHTML = '<div class="error-message">No se encontraron contratos con datos.</div>';
+                return;
+            }
+
+            contratos.forEach(contrato => {
+                const card = document.createElement('div');
+                card.className = 'contrato-card';
+                card.onclick = () => selectContratoForChat(contrato.codigo_proceso);
+                
+                card.innerHTML = `
+                    <div class="codigo">${contrato.codigo_proceso || 'N/A'}</div>
+                    <div class="field">
+                        <div class="field-label">Razón Social</div>
+                        <div class="field-value">${contrato.razon_social || ''}</div>
+                    </div>
+                    <div class="field">
+                        <div class="field-label">Representante</div>
+                        <div class="field-value">${contrato.representante || ''}</div>
+                    </div>
+                    <div class="field">
+                        <div class="field-label">RUC</div>
+                        <div class="field-value">${contrato.ruc || ''}</div>
+                    </div>
+                    <div class="field">
+                        <div class="field-label">Teléfono</div>
+                        <div class="field-value">${contrato.telefono || ''}</div>
+                    </div>
+                    <div class="field">
+                        <div class="field-label">Email</div>
+                        <div class="field-value">${contrato.mail || ''}</div>
+                    </div>
+                    <div class="field">
+                        <div class="field-label">Domicilio</div>
+                        <div class="field-value">${contrato.domicilio || ''}</div>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function populateContratoSelect(contratos) {
+            const select = document.getElementById('contratoSelect');
+            select.innerHTML = '<option value="">Contrato general</option>';
+            
+            contratos.forEach(contrato => {
+                const option = document.createElement('option');
+                option.value = contrato.codigo_proceso;
+                option.textContent = `${contrato.codigo_proceso} - ${contrato.razon_social || 'Sin razón social'}`;
+                select.appendChild(option);
+            });
+        }
+
+        function selectContratoForChat(codigoProceso) {
+            document.getElementById('contratoSelect').value = codigoProceso;
+            if (chatbotMinimized) {
+                toggleChatbot();
+            }
+            document.getElementById('chatbotInput').focus();
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.textContent = message;
+            errorContainer.style.display = 'block';
+        }
+
+        function toggleChatbot() {
+            chatbotMinimized = !chatbotMinimized;
+            const container = document.getElementById('chatbotContainer');
+            const btn = document.getElementById('toggleBtn');
+            
+            if (chatbotMinimized) {
+                container.classList.add('minimized');
+                btn.textContent = '+';
+            } else {
+                container.classList.remove('minimized');
+                btn.textContent = '−';
+            }
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatbotInput');
+            const sendBtn = document.getElementById('chatbotSendBtn');
+            const messagesContainer = document.getElementById('chatbotMessages');
+            const contratoSelect = document.getElementById('contratoSelect');
+            
+            const pregunta = input.value.trim();
+            if (!pregunta) return;
+
+            // Agregar mensaje del usuario
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.textContent = pregunta;
+            messagesContainer.appendChild(userMessage);
+            
+            // Limpiar input y deshabilitar botón
+            input.value = '';
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<div class="loading"></div>';
+
+            // Scroll al final
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chatbot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pregunta: pregunta,
+                        codigo_proceso: contratoSelect.value || null
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Agregar respuesta del bot
+                const botMessage = document.createElement('div');
+                botMessage.className = 'message bot';
+                botMessage.textContent = data.respuesta;
+                messagesContainer.appendChild(botMessage);
+
+            } catch (error) {
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'message bot';
+                errorMessage.textContent = '❌ Error: ' + error.message;
+                messagesContainer.appendChild(errorMessage);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '➤';
+                input.focus();
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+
+        // Inicializar
+        loadContratos();
+        
+        // Auto-refresh cada 30 segundos
+        setInterval(loadContratos, 30000);
+    </script>
+</body>
+</html>
+

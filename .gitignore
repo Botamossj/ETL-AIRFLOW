@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+*.egg-info/
+dist/
+build/
+
+# Airflow
+logs/
+airflow.db
+airflow-webserver.pid
+*.pid
+
+# Docker volumes (datos locales)
+postgres-db-volume/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files (opcional - puedes quitarlos si quieres subirlos)
+test_*.py
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+
+# Data files (los TXT convertidos son muy pesados)
+data/txt_convertidos/
+
+# Screenshots
+*.png
+*.jpg
+*.jpeg
+

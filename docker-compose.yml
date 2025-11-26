@@ -1,0 +1,85 @@
+version: '3.8'
+
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:2.9.2
+  env_file:
+    - .env
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY:-4tT0uA814bNW2IGaImlbGUN2IwUk3FewGIkHLMhGWyY=}
+    AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-False}
+    AIRFLOW__API__AUTH_BACKENDS: ${AIRFLOW__API__AUTH_BACKENDS:-airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session}
+    AIRFLOW__CORE__PARALLELISM: ${AIRFLOW__CORE__PARALLELISM:-64}
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: ${AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG:-32}
+    _PIP_ADDITIONAL_REQUIREMENTS: "psycopg2-binary==2.9.9 requests>=2.31.0,<3.0.0 python-dotenv>=1.0.0,<2.0.0 google-generativeai==0.7.0"
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./requirements.txt:/opt/airflow/requirements.txt:ro
+    - ./data:/opt/airflow/data
+    - C:/Users/david/Desktop/Descarga_Procesos/contratos/txt_convertidos:/opt/airflow/data/txt_convertidos
+  user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:13
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${AIRFLOW_DATABASE_USER:-airflow}
+      POSTGRES_PASSWORD: ${AIRFLOW_DATABASE_PASSWORD:-airflow}
+      POSTGRES_DB: ${AIRFLOW_DATABASE_NAME:-airflow}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AIRFLOW_DATABASE_USER:-airflow} -d ${AIRFLOW_DATABASE_NAME:-airflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./postgres-db-volume:/var/lib/postgresql/data
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command: >
+      -c "
+      pip install --no-cache-dir -r /opt/airflow/requirements.txt &&
+      airflow db migrate &&
+      airflow users create -u ${AIRFLOW_USERNAME:-admin} -p ${AIRFLOW_PASSWORD:-admin} -f ${AIRFLOW_FIRSTNAME:-Airflow} -l ${AIRFLOW_LASTNAME:-Admin} -r Admin -e ${AIRFLOW_EMAIL:-admin@example.com} || true
+      "
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command: >
+      -c "
+      pip install --no-cache-dir -r /opt/airflow/requirements.txt &&
+      airflow webserver
+      "
+    ports:
+      - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
+    depends_on:
+      - airflow-init
+    restart: always
+
+  airflow-scheduler:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command: >
+      -c "
+      pip install --no-cache-dir -r /opt/airflow/requirements.txt &&
+      airflow scheduler
+      "
+    depends_on:
+      - airflow-init
+    restart: always
+
+volumes:
+  postgres-db-volume:
