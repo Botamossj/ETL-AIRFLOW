@@ -47,7 +47,7 @@ TXT_SOURCE_DIR = Path(
 BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "200"))
 POSTGRES_CONN_ID = os.environ.get("POSTGRES_CONN_ID", "oppdesarrollo_postgres")
 CONTRATOS_TABLE = "public.sync_contratos"
-LLM_API_KEY = os.environ.get("LLM_API_KEY", "")  # IMPORTANTE: Definir en .env para evitar exposición
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "AIzaSyCXagg3BcPlPc_v_wWh6yG1vjKEzaWxEuM")
 LLM_MODEL = os.environ.get("LLM_MODEL", "gemini-2.5-pro")
 
 # Campos del contratista a verificar y actualizar (nombres exactos de columnas)
@@ -426,9 +426,151 @@ def pre_filtro(texto: str) -> str:
 
 def aislar_bloque_contratista(texto: str) -> str:
     """
-    Función legacy - ahora usa pre_filtro() internamente.
-    Mantenida para compatibilidad con código existente.
+    Aísla el bloque donde aparece información del contratista.
+    
+    Estrategia de detección (en orden de prioridad):
+    1. Detectar frases de adjudicación: "adjudicó el contrato a", "oferente adjudicado",
+       "oferente ganador", "se adjudica a" - tomar 800-1200 chars alrededor.
+    2. Si no encuentra frases de adjudicación, usar pre_filtro() estándar.
+    
+    Args:
+        texto: Texto completo del contrato
+        
+    Returns:
+        Bloque de texto filtrado con información del contratista
     """
+    if not texto:
+        return ""
+    
+    # Normalizar texto
+    texto_norm = texto.replace("\r", "").replace("\t", " ")
+    texto_norm = re.sub(r"[ \t]+", " ", texto_norm)
+    texto_norm = re.sub(r"\n{3,}", "\n\n", texto_norm)
+    texto_lower = texto_norm.lower()
+    
+    # =====================================================
+    # PASO 1: Detectar frases de adjudicación (PRIORITARIO)
+    # Ejecutar ANTES del fallback y ANTES de CONTRATISTA:, PROVEEDOR:, ADJUDICATARIO:
+    # =====================================================
+    patrones_adjudicacion = [
+        r"adjudic[óo]\s+el\s+contrato\s+a\b",          # "adjudicó el contrato a …"
+        r"oferente\s+adjudicado\b",                    # "oferente adjudicado …"
+        r"oferente\s+ganador\b",                       # "oferente ganador …"
+        r"se\s+adjudica\s+a\b",                        # "se adjudica a …"
+        r"se\s+adjudic[óo]\s+a\b",                     # "se adjudicó a …"
+        r"adjudicatario\s+(?:es|ser[áa]|fue)\b",       # "adjudicatario es/será/fue …"
+        r"ha\s+sido\s+adjudicado\s+a\b",               # "ha sido adjudicado a …"
+        r"resultado\s+de\s+adjudicaci[óo]n\b",         # "resultado de adjudicación …"
+        r"resoluci[óo]n\s+de\s+adjudicaci[óo]n\b",     # "resolución de adjudicación …"
+    ]
+    
+    bloques_adjudicacion: List[tuple[int, int, str]] = []
+    
+    for patron in patrones_adjudicacion:
+        for match in re.finditer(patron, texto_lower, re.IGNORECASE):
+            pos_match = match.start()
+            
+            # Tomar bloque de 800 caracteres antes y 1200 después (total ~2000 chars)
+            inicio_bloque = max(0, pos_match - 800)
+            fin_bloque = min(len(texto_norm), pos_match + 1200)
+            
+            # =====================================================
+            # Buscar nombre del adjudicado y RUC cercano (dentro de 200 chars después)
+            # Si se encuentran, extender el bloque para incluir todo ese segmento
+            # =====================================================
+            texto_despues = texto_norm[pos_match:min(len(texto_norm), pos_match + 500)]
+            
+            # Buscar RUC cercano (dentro de 200 caracteres después del match)
+            ruc_match = re.search(
+                r"\b(?:RUC|R\.U\.C\.?)\s*[:#]?\s*(\d{13})\b",
+                texto_despues[:200],
+                re.IGNORECASE
+            )
+            
+            if ruc_match:
+                # Extender fin_bloque para incluir el RUC + contexto adicional
+                pos_ruc = pos_match + ruc_match.end()
+                fin_bloque = max(fin_bloque, min(len(texto_norm), pos_ruc + 300))
+                logger.debug(
+                    "Adjudicación encontrada con RUC cercano en posición %d, extendiendo bloque",
+                    pos_match
+                )
+            
+            # Buscar también si hay nombre de empresa después (S.A., CIA LTDA, etc.)
+            empresa_match = re.search(
+                r"\b([A-Z][A-Z0-9\.\-&\s]+?(?:S\.A\.|CIA\.?\s*LTDA\.?|S\.A\.S\.|LTDA\.?))",
+                texto_despues[:300],
+                re.IGNORECASE
+            )
+            
+            if empresa_match:
+                pos_empresa = pos_match + empresa_match.end()
+                fin_bloque = max(fin_bloque, min(len(texto_norm), pos_empresa + 200))
+                logger.debug(
+                    "Adjudicación encontrada con empresa cercana en posición %d",
+                    pos_match
+                )
+            
+            bloque = texto_norm[inicio_bloque:fin_bloque]
+            
+            # Verificar que no esté solapado con bloques existentes
+            solapado = False
+            for inicio_exist, fin_exist, _ in bloques_adjudicacion:
+                if not (fin_bloque < inicio_exist or inicio_bloque > fin_exist):
+                    solapado = True
+                    # Fusionar bloques si hay solapamiento
+                    nuevo_inicio = min(inicio_bloque, inicio_exist)
+                    nuevo_fin = max(fin_bloque, fin_exist)
+                    bloques_adjudicacion.remove((inicio_exist, fin_exist, texto_norm[inicio_exist:fin_exist]))
+                    bloques_adjudicacion.append((nuevo_inicio, nuevo_fin, texto_norm[nuevo_inicio:nuevo_fin]))
+                    break
+            
+            if not solapado:
+                bloques_adjudicacion.append((inicio_bloque, fin_bloque, bloque))
+                logger.info(
+                    "Frase de adjudicación detectada: '%s' en posición %d",
+                    match.group()[:50],
+                    pos_match
+                )
+    
+    # Si encontramos bloques de adjudicación, usarlos como contractor_block
+    if bloques_adjudicacion:
+        # Ordenar por posición y combinar
+        bloques_adjudicacion.sort(key=lambda x: x[0])
+        
+        # Fusionar bloques cercanos (menos de 300 caracteres de separación)
+        bloques_fusionados: List[tuple[int, int, str]] = []
+        for inicio, fin, bloque in bloques_adjudicacion:
+            if bloques_fusionados:
+                ultimo_inicio, ultimo_fin, _ = bloques_fusionados[-1]
+                if inicio - ultimo_fin < 300:
+                    nuevo_fin = max(fin, ultimo_fin)
+                    nuevo_bloque = texto_norm[ultimo_inicio:nuevo_fin]
+                    bloques_fusionados[-1] = (ultimo_inicio, nuevo_fin, nuevo_bloque)
+                else:
+                    bloques_fusionados.append((inicio, fin, bloque))
+            else:
+                bloques_fusionados.append((inicio, fin, bloque))
+        
+        # Combinar todos los bloques de adjudicación
+        texto_adjudicacion = "\n\n---\n\n".join(bloque for _, _, bloque in bloques_fusionados)
+        
+        logger.info(
+            "Bloques de adjudicación encontrados: %d bloques, %d caracteres totales",
+            len(bloques_fusionados),
+            len(texto_adjudicacion)
+        )
+        
+        # Limitar tamaño (máximo 10000 caracteres)
+        if len(texto_adjudicacion) > 10000:
+            texto_adjudicacion = texto_adjudicacion[:10000]
+        
+        return texto_adjudicacion
+    
+    # =====================================================
+    # PASO 2: Si no encontró frases de adjudicación, usar pre_filtro() estándar
+    # =====================================================
+    logger.debug("No se encontraron frases de adjudicación, usando pre_filtro() estándar")
     return pre_filtro(texto)
 
 
@@ -2144,8 +2286,8 @@ default_args = {
     schedule="@daily",
     start_date=datetime(2024, 1, 1),
     catchup=False,
-    max_active_runs=1,  # Solo una ejecución a la vez para evitar problemas de conexiones
-    max_active_tasks=8,  # Reducido para evitar "too many clients" en PostgreSQL
+    max_active_runs=32,  # Permitir múltiples ejecuciones en paralelo
+    max_active_tasks=32,  # Aumentar paralelismo dentro del DAG
     default_args=default_args,
     tags=["etl", "contratos", "contratista", "llm"],
 )
