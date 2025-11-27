@@ -12,8 +12,8 @@ x-airflow-common:
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY:-4tT0uA814bNW2IGaImlbGUN2IwUk3FewGIkHLMhGWyY=}
     AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-False}
     AIRFLOW__API__AUTH_BACKENDS: ${AIRFLOW__API__AUTH_BACKENDS:-airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session}
-    AIRFLOW__CORE__PARALLELISM: ${AIRFLOW__CORE__PARALLELISM:-64}
-    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: ${AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG:-32}
+    AIRFLOW__CORE__PARALLELISM: ${AIRFLOW__CORE__PARALLELISM:-16}
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: ${AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG:-8}
     _PIP_ADDITIONAL_REQUIREMENTS: "psycopg2-binary==2.9.9 requests>=2.31.0,<3.0.0 python-dotenv>=1.0.0,<2.0.0 google-generativeai==0.7.0"
   volumes:
     - ./dags:/opt/airflow/dags
@@ -36,6 +36,7 @@ services:
       POSTGRES_USER: ${AIRFLOW_DATABASE_USER:-airflow}
       POSTGRES_PASSWORD: ${AIRFLOW_DATABASE_PASSWORD:-airflow}
       POSTGRES_DB: ${AIRFLOW_DATABASE_NAME:-airflow}
+    command: postgres -c max_connections=200
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${AIRFLOW_DATABASE_USER:-airflow} -d ${AIRFLOW_DATABASE_NAME:-airflow}"]
       interval: 10s

@@ -30,7 +30,7 @@ POSTGRES_CONN_ID = os.environ.get("POSTGRES_CONN_ID", "contratos_postgres")
 SYNC_CONTRATOS_TABLE = os.environ.get("SYNC_CONTRATOS_TABLE", "sync_contratos")
 TXT_CONTROL_TABLE = os.environ.get("TXT_CONTROL_TABLE", "txt_control")
 LLM_ENDPOINT = os.environ.get("LLM_ENDPOINT")
-LLM_API_KEY = os.environ.get("LLM_API_KEY", "AIzaSyAZhCbdergVASQI_tGdDoM_dR43et8FzEo")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")  # IMPORTANTE: Definir en .env para evitar exposición
 LLM_TIMEOUT = int(os.environ.get("LLM_TIMEOUT", "60"))
 
 # Campos esperados del contrato

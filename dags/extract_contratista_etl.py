@@ -47,7 +47,7 @@ TXT_SOURCE_DIR = Path(
 BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "200"))
 POSTGRES_CONN_ID = os.environ.get("POSTGRES_CONN_ID", "oppdesarrollo_postgres")
 CONTRATOS_TABLE = "public.sync_contratos"
-LLM_API_KEY = os.environ.get("LLM_API_KEY", "AIzaSyCXagg3BcPlPc_v_wWh6yG1vjKEzaWxEuM")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")  # IMPORTANTE: Definir en .env para evitar exposición
 LLM_MODEL = os.environ.get("LLM_MODEL", "gemini-2.5-pro")
 
 # Campos del contratista a verificar y actualizar (nombres exactos de columnas)
@@ -2144,8 +2144,8 @@ default_args = {
     schedule="@daily",
     start_date=datetime(2024, 1, 1),
     catchup=False,
-    max_active_runs=32,  # Permitir múltiples ejecuciones en paralelo
-    max_active_tasks=32,  # Aumentar paralelismo dentro del DAG
+    max_active_runs=1,  # Solo una ejecución a la vez para evitar problemas de conexiones
+    max_active_tasks=8,  # Reducido para evitar "too many clients" en PostgreSQL
     default_args=default_args,
     tags=["etl", "contratos", "contratista", "llm"],
 )

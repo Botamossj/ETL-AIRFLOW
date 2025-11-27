@@ -7,7 +7,7 @@ import os
 import google.generativeai as genai
 
 # API Key
-API_KEY = os.environ.get("LLM_API_KEY", "AIzaSyCXagg3BcPlPc_v_wWh6yG1vjKEzaWxEuM")
+API_KEY = os.environ.get("LLM_API_KEY", "")  # Definir en .env
 
 print("=" * 60)
 print("LISTANDO MODELOS DISPONIBLES DE GEMINI")
